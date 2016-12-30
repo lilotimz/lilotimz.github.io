@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8" />
+<link rel="shortcut icon" href="http://s4gru.com/favicon.ico" type="image/vnd.microsoft.icon" />
+<title>UCV All In One</title>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.10&sensor=false&libraries=places"></script>
+<style>
+body{
+  margin: 0px;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+}
+#map{
+  width: 100%;
+  height: 100%;
+}
+#search-panel {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  margin-left: -180px;
+  width: 350px;
+  z-index: 5;
+  background-color: #fff;
+  padding: 5px;
+  border: 1px solid #999;
+}
+input#target {
+  width: 345px;
+}
+#googft-legend{background-color:#fff;border:1px solid #000;font-family:Arial, sans-serif;font-size:12px;margin:5px;padding:10px 10px 8px;}#googft-legend p{font-weight:bold;margin-top:0;}#googft-legend div{margin-bottom:5px;}.googft-legend-swatch{border:1px solid;float:left;height:12px;margin-right:8px;width:20px;}.googft-legend-range{margin-left:0;}.googft-dot-icon{margin-right:8px;}.googft-paddle-icon{height:24px;left:-8px;margin-right:-8px;position:relative;vertical-align:middle;width:24px;}.googft-legend-source{margin-bottom:0;margin-top:8px;}.googft-legend-source a{color:#666;font-size:11px;}
+   #legend {
+        background: #FFF;
+        padding: 10px;
+        margin: 5px;
+        font-size: 12px;
+        font-family: Arial, sans-serif;
+      }
+
+      .color {
+        border: 1px solid;
+        height: 12px;
+        width: 12px;
+        margin-right: 3px;
+        float: left;
+      }
+
+      .red {
+        background: #C00;
+      }
+
+      .yellow {
+        background: #FF3;
+      }
+
+      .green {
+        background: #6F0;
+      }
+
+      .blue {
+        background: #06C;
+      }
+
+      .purple {
+        background: #63C;
+      }
+</style>
+<script>
+var map;
+function initialize() {
+  var mapOptions = {
+    zoom: 8,
+    center: new google.maps.LatLng(38.581571900000000000, -121.494399600000010000),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  map = new google.maps.Map(document.getElementById("map"), mapOptions);
+  var sensorlyOverlay = {
+      getTileUrl: function (tile, zoom) {
+          return "http://tiles-day.cdn.sensorly.net/tile/any/lte_310sprint/" + zoom + "/" + (tile.x % 16384) + "/" + tile.x + "/" + (tile.y % 16384) + "/" + tile.y + ".png?s=512"
+      },
+      tileSize: new google.maps.Size(512, 512),
+      isPng: true
+  };
+     map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('googft-legend'));
+
+     layer = new google.maps.FusionTablesLayer({
+      map: map,
+      heatmap: { enabled: false },
+      query: {
+        select: "col19",
+        from: "1TJ7HdzMjmQVcKDFMVN1O1Xlx1_Mp4PjEewdDJWXT",
+        where: ""
+      },
+      options: {
+        styleId: 2,
+        templateId: 2
+      }
+    });
+  var sensorlyMapType = new google.maps.ImageMapType(sensorlyOverlay);
+  map.overlayMapTypes.removeAt(0);
+  map.overlayMapTypes.insertAt(0, sensorlyMapType);
+  layer.setMap(map);
+  var input = document.getElementById('target');
+  var searchBox = new google.maps.places.SearchBox(input);
+  var markers = [];
+  google.maps.event.addListener(searchBox, 'places_changed', function() {
+    var places = searchBox.getPlaces();
+    for (var i = 0, marker; marker = markers[i]; i++) {
+      marker.setMap(map);
+    }
+    markers = [];
+    var bounds = new google.maps.LatLngBounds();
+    for (var i = 0, place; place = places[i]; i++) {
+      var image = new google.maps.MarkerImage(
+        place.icon, new google.maps.Size(71, 71),
+        new google.maps.Point(0, 0), new google.maps.Point(17, 34),
+        new google.maps.Size(25, 25));
+      var marker = new google.maps.Marker({
+        map: map,
+        icon: image,
+        title: place.name,
+        position: place.geometry.location
+      });
+        markers.push(marker);
+        bounds.extend(place.geometry.location);
+      }
+        map.fitBounds(bounds);
+        zoomChangeBoundsListener =
+        google.maps.event.addListenerOnce(map, 'bounds_changed', function(event) {
+        if (this.getZoom()){
+            this.setZoom(12);
+        }
+      });
+      });
+      google.maps.event.addListener(map, 'bounds_changed', function() {
+      var bounds = map.getBounds();
+      searchBox.setBounds(bounds);
+      });
+      // Create the legend and display on the map
+        var legend = document.createElement('div');
+        legend.id = 'legend';
+        var content = [];
+		content.push('<p><img src="http://i.imgur.com/7mnIK5q.png" />3G </p>');
+		content.push('<p><img src="http://i.imgur.com/AjR9hFn.png" />3G/4G </p>');
+        	content.push('<p><img src="http://i.imgur.com/4vmNQ3r.png" />3G/800 </p>');
+       	 	content.push('<p><img src="http://i.imgur.com/MaVfMPS.png" />3G/800/4G </p>');
+        	content.push('<p><img src="http://i.imgur.com/doyjgaE.png" />3G/800/4G 2500 </p>');
+		content.push('<p><img src="http://i.imgur.com/Edim3Ev.png" />WiMax/LTE 2500 </p>');
+		content.push('<p><img src="http://i.imgur.com/WjdJOe0.png" />LTE 2500 Mini Macro </p>');
+		content.push('<p><img src="http://i.imgur.com/hOfKxdC.png" />WiMax</p>');
+        legend.innerHTML = content.join('');
+        legend.index = 1;
+        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+  };
+  google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+</head>
+<body>
+    <div id="search-panel">
+      <input id="target" type="text" placeholder="Search Box">
+    </div>
+    <div id="map">Loading map...</div>
+</body>
+</html>
