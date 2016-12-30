@@ -1,165 +1,839 @@
+
 <!DOCTYPE html>
 <head>
 <meta charset="utf-8" />
-<link rel="shortcut icon" href="http://s4gru.com/favicon.ico" type="image/vnd.microsoft.icon" />
-<title>UCV All In One</title>
+<title>Ultimate Coverage Map</title>
 <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js"></script>
 <style>
-body{
-  margin: 0px;
-  width: 100%;
-  height: 100%;
-  position: absolute;
+body {
+    margin: 0px;
+    width: 100%;
+    height: 100%;
+    position: absolute;
 }
-#map{
-  width: 100%;
-  height: 100%;
+
+#map {
+    width: 100%;
+    height: 100%;
 }
-#search-panel {
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  margin-left: -180px;
-  width: 350px;
-  z-index: 5;
-  background-color: #fff;
-  padding: 5px;
-  border: 1px solid #999;
+
+#legend {
+    display: none;
+    text-align: right;
+    padding: 5px;
 }
-input#target {
-  width: 345px;
+
+#legend div.panel { text-align: inherit; }
+
+#legend span.indicator {
+    font-size: 2.5em;
+    text-shadow: 0px 0px 4px;
+    vertical-align: middle;
+    padding: 0px 8px;
 }
-#googft-legend{background-color:#fff;border:1px solid #000;font-family:Arial, sans-serif;font-size:12px;margin:5px;padding:10px 10px 8px;}#googft-legend p{font-weight:bold;margin-top:0;}#googft-legend div{margin-bottom:5px;}.googft-legend-swatch{border:1px solid;float:left;height:12px;margin-right:8px;width:20px;}.googft-legend-range{margin-left:0;}.googft-dot-icon{margin-right:8px;}.googft-paddle-icon{height:24px;left:-8px;margin-right:-8px;position:relative;vertical-align:middle;width:24px;}.googft-legend-source{margin-bottom:0;margin-top:8px;}.googft-legend-source a{color:#666;font-size:11px;}
-   #legend {
-        background: #FFF;
-        padding: 10px;
-        margin: 5px;
-        font-size: 12px;
-        font-family: Arial, sans-serif;
-      }
 
-      .color {
-        border: 1px solid;
-        height: 12px;
-        width: 12px;
-        margin-right: 3px;
-        float: left;
-      }
+#legend span.panelcontrol {
+    font-size: 1.2em;
+    vertical-align: middle;
+    padding: 0px 5px;
+}
 
-      .red {
-        background: #C00;
-      }
+#legend > div {
+    width: 100px;
+}
 
-      .yellow {
-        background: #FF3;
-      }
+#legend a {
+    display: block;
+    -webkit-user-select: none;
+    box-shadow: rgba(0, 0, 0, 0.298039) 0px 1px 4px -1px;
+    border-radius: 2px;
+    cursor: pointer;
+    text-align: left;
+    vertical-align: middle;
+    width: 100%;
+    background-color: #F0F0F0;
+    margin: 5px;
+    font-weight: bold;
+}
 
-      .green {
-        background: #6F0;
-      }
+#legend a.panelheader {
+    padding: 5px 0px;
+    background-color: #E0E0E0;
+    font-size: 0.8em;
+}
 
-      .blue {
-        background: #06C;
-      }
+#legend a:link, #legend a:visited {
+    color: #666666;
+    text-decoration: none;
+}
 
-      .purple {
-        background: #63C;
-      }
+#legend a:hover { color: #444444; }
+#legend .panel a:hover span.indicator { text-shadow: 0px 0px 8px; }
+
+#legend a:active, #legend a:active span { color: #000000; }
+#legend a:active { background-color: #FFFFFF; }
+#legend .panel a:active span.indicator { opacity: 0.75; }
+
+#controlsbutton {
+    text-align: center !important;
+    width: 80px !important;
+}
+    
 </style>
 <script>
 var map;
-function initialize() {
-  var mapOptions = {
-    zoom: 8,
-    center: new google.maps.LatLng(38.581571900000000000, -121.494399600000010000),
-    mapTypeId: google.maps.MapTypeId.ROADMAP
-  };
-  map = new google.maps.Map(document.getElementById("map"), mapOptions);
-  var sensorlyOverlay = {
-      getTileUrl: function (tile, zoom) {
-          return "http://tiles-day.cdn.sensorly.net/tile/any/lte_310sprint/" + zoom + "/" + (tile.x % 16384) + "/" + tile.x + "/" + (tile.y % 16384) + "/" + tile.y + ".png?s=512"
-      },
-      tileSize: new google.maps.Size(512, 512),
-      isPng: true
-  };
-     map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('googft-legend'));
+var legend;
 
-     layer = new google.maps.FusionTablesLayer({
-      map: map,
-      heatmap: { enabled: false },
-      query: {
-        select: "col19",
-        from: "1TJ7HdzMjmQVcKDFMVN1O1Xlx1_Mp4PjEewdDJWXT",
-        where: ""
-      },
-      options: {
+// Site Pin Layers
+var nextelSiteLayer;
+var nvSiteLayer;
+var clearSiteLayer;
+var s4gruNvSiteLayer;
+var s4gru800SiteLayer;
+var s4gruClearSiteLayer;
+var s4gru8t8rSiteLayer;
+
+// Sprint Layers
+var sparkCoverage;
+var nvCoverage;
+var wimaxCoverage;
+var pvCoverage;
+var voiceCoverage;
+
+// Clear Layers
+var clearHome;
+var clearMobile;
+var clearRoaming;
+var clearFuture;
+var clearSites;
+
+// T-Mobile Layers
+var tmoPrepaid;
+var tmoBasic;
+var tmoExtended;
+
+// Fi Layers
+var fiCoverage;
+
+// AT&T Layers
+var attGsm;
+var attUmts;
+var attHspa;
+var attLte;
+
+// Top Layers
+var waterLayer;
+var roadLayer;
+
+// Site Pin Toggles
+var showNextel = false;
+var showSprint = true;
+var showClear = false;
+var showS4gruNv = false;
+var showS4gru800 = false;
+var showS4gruClear = false;
+var showS4gru8t8r = false;
+
+// Sprint Layer Toggles
+var showVoice = false;
+var show3G = true;
+var showWiMAX = false;
+var showLTE = false;
+var showSpark = true;
+
+// Clear Layer Toggles
+var showClearRoaming = false;
+var showClearMobile = false;
+var showClearHome = false;
+var showClearFuture = false;
+var showClearSites = false;
+
+// T-Mobile Layer Toggles
+var showTmoPrepaid = false;
+var showTmoBasic = false;
+var showTmoExtended = false;
+
+// AT&T Layer Toggles
+var showAttGsm = false;
+var showAttUmts = false;
+var showAttHspa = false;
+var showAttLte = false;
+
+// Fi Layer Toggles
+var showFiCoverage = false;
+
+// Panel Toggles
+var showSiteDotButtons = false;
+var showSitePinButtons = true;
+var showSprintLayerButtons = false;
+var showClearLayerButtons = false;
+var showTmoLayerButtons = false;
+var showFiLayerButtons = false;
+var showAttLayerButtons = false;
+var showSensorlyLayerButtons = false;
+
+var showControls = true;
+
+// borrowed from http://maps.t-mobile.com/pcc/maps/test-eng/config.json
+var mapStyles = {
+    "bottom":
+    [
+        {"stylers": [{ "visibility": "off" }]},
+        {"featureType": "landscape.natural", "elementType":"geometry.fill", "stylers":[{"visibility":"on"}, {"color":"#ffffff"}]},
+        {"featureType": "water", "stylers": [{"visibility": "on"}, {"hue": "#00bbff"}, {"saturation": -40}, {"lightness": -8}]},
+        {"featureType": "road", "elementType": "geometry", "stylers": [{"visibility": "simplified"}, {"weight":1.4}, {"saturation": -100}, {"lightness": -40}]},
+        {"featureType": "road.highway", "elementType":"geometry.fill", "stylers":[{"weight":2}, {"lightness":40}]},
+        {"featureType": "road", "elementType": "labels", "stylers": [{"visibility": "simplified"}, {"weight": 2}, {"gamma": 0.1}]},
+        {"featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{"visibility": "on"}, {"weight": 1}]},
+        {"featureType": "administrative.locality", "elementType": "labels", "stylers": [{"visibility":"simplified"}, {"color":"#000000"}]},
+        {"featureType": "administrative.province", "elementType": "labels", "stylers": [{"visibility":"simplified"}, {"color":"#000000"}]}
+    ],
+
+    "middle":
+    [
+        {"stylers": [{ "visibility": "off" }]},
+        {"featureType": "water", "stylers": [{ "visibility": "on" }, { "hue": "#00bbff" }, { "saturation": -40 }, { "lightness": -8 }]}
+    ],
+
+    "top":
+    [
+        {"stylers": [{ "visibility": "off" }]},
+        {"featureType": "road", "elementType": "geometry", "stylers": [{"visibility": "simplified"}, {"weight":1.4}, {"saturation": -100}, {"lightness": -40}]},
+        {"featureType": "road.highway", "elementType":"geometry.fill", "stylers":[{"weight":2}, {"lightness":40}]},
+        {"featureType": "road", "elementType": "labels", "stylers": [{"visibility":"simplified"}, {"weight":2}, {"gamma":0.1}]},
+        {"featureType": "transit", "elementType": "geometry", "stylers": [{"visibility": "simplified"}, {"weight": 1}, {"saturation": -100}, {"gamma": 0.5}]},
+        {"featureType": "transit", "elementType": "labels", "stylers": [{"visibility": "simplified"}, {"weight": 2}, {"gamma": 0.1}]},
+        {"featureType": "transit.station", "elementType": "all", "stylers": [{"visibility": "off"}]},   
+        {"featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{"visibility": "on"}, {"weight": 1}]},
+        {"featureType": "administrative.neighborhood", "elementType": "labels", "stylers": [{"visibility": "simplified"}, {"color": "#000000"}]},
+        {"featureType": "administrative.locality", "elementType": "labels", "stylers": [{"visibility": "simplified"}, {"color": "#000000"}]},
+        {"featureType": "administrative.province", "elementType": "labels", "stylers": [{"visibility": "simplified"}, {"color": "#000000"}]}
+    ]
+}
+
+// borrowed from https://maps.t-mobile.com/pcc/app/pccService.js
+function createStyledLayer(name, styles) {
+    var styledLayer = null;
+
+    if (styles) {
+        styledLayer = new google.maps.StyledMapType(styles);
+        styledLayer.name = name;
+    }
+
+    return styledLayer;
+}
+
+// borrowed from https://developer.here.com/rest-apis/documentation/venue-maps/topics/key-concepts.html
+function tileXYToQuadKey(xTile, yTile, z) {
+	var quadKey = "";
+	for (var i = z; i > 0; i--) {
+		var digit = "0",
+			mask = 1 << (i - 1);
+		if ((xTile & mask) != 0) {
+			digit++;
+		}
+		if ((yTile & mask) != 0) {
+			digit++; 
+			digit++;
+		}
+		quadKey += digit;
+	} //for i return quadKey; 
+	
+	return quadKey;
+}
+
+function createFusionLayer(_select, _from, _where, options) {
+    var layer = new google.maps.FusionTablesLayer({
+        heatmap: { enabled: false },
+        query: {
+            select: _select,
+            from: _from,
+            where: _where
+        },
         styleId: 2,
         templateId: 2
-      }
     });
-  var sensorlyMapType = new google.maps.ImageMapType(sensorlyOverlay);
-  map.overlayMapTypes.removeAt(0);
-  map.overlayMapTypes.insertAt(0, sensorlyMapType);
-  layer.setMap(map);
-  var input = document.getElementById('target');
-  var searchBox = new google.maps.places.SearchBox(input);
-  var markers = [];
-  google.maps.event.addListener(searchBox, 'places_changed', function() {
-    var places = searchBox.getPlaces();
-    for (var i = 0, marker; marker = markers[i]; i++) {
-      marker.setMap(map);
+
+    if (options !== null) {
+        layer.setOptions(options);
     }
-    markers = [];
-    var bounds = new google.maps.LatLngBounds();
-    for (var i = 0, place; place = places[i]; i++) {
-      var image = new google.maps.MarkerImage(
-        place.icon, new google.maps.Size(71, 71),
-        new google.maps.Point(0, 0), new google.maps.Point(17, 34),
-        new google.maps.Size(25, 25));
-      var marker = new google.maps.Marker({
-        map: map,
-        icon: image,
-        title: place.name,
-        position: place.geometry.location
-      });
-        markers.push(marker);
-        bounds.extend(place.geometry.location);
-      }
-        map.fitBounds(bounds);
-        zoomChangeBoundsListener =
-        google.maps.event.addListenerOnce(map, 'bounds_changed', function(event) {
-        if (this.getZoom()){
-            this.setZoom(12);
-        }
-      });
-      });
-      google.maps.event.addListener(map, 'bounds_changed', function() {
-      var bounds = map.getBounds();
-      searchBox.setBounds(bounds);
-      });
-      // Create the legend and display on the map
-        var legend = document.createElement('div');
-        legend.id = 'legend';
-        var content = [];
-		content.push('<p><img src="http://i.imgur.com/7mnIK5q.png" />3G </p>');
-		content.push('<p><img src="http://i.imgur.com/AjR9hFn.png" />3G/4G </p>');
-        	content.push('<p><img src="http://i.imgur.com/4vmNQ3r.png" />3G/800 </p>');
-       	 	content.push('<p><img src="http://i.imgur.com/MaVfMPS.png" />3G/800/4G </p>');
-        	content.push('<p><img src="http://i.imgur.com/doyjgaE.png" />3G/800/4G 2500 </p>');
-		content.push('<p><img src="http://i.imgur.com/Edim3Ev.png" />WiMax/LTE 2500 </p>');
-		content.push('<p><img src="http://i.imgur.com/WjdJOe0.png" />LTE 2500 Mini Macro </p>');
-		content.push('<p><img src="http://i.imgur.com/hOfKxdC.png" />WiMax</p>');
-        legend.innerHTML = content.join('');
-        legend.index = 1;
-        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
-  };
-  google.maps.event.addDomListener(window, 'load', initialize);
+
+    return layer;
+}
+
+function createSprintLayer(path) {
+    return new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            if (coord.x < 0 || coord.y < 0) return 'https://maps.gstatic.com/mapfiles/transparent.png';
+            var base = 'http://coverage.sprint.com/MapTile';
+            return [base, '/', path, '/', (zoom + 1), '/', (coord.x + 1), ':', (coord.y + 1), '/tile.png'].join(separator='');
+        },
+        tileSize: new google.maps.Size(256, 256)
+    });
+}
+
+function createClearLayer(name) {
+    return new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            if (coord.x < 0 || coord.y < 0) return 'https://maps.gstatic.com/mapfiles/transparent.png';
+            var base = 'https://t1.mapsclear.com';
+            return [
+                base, '/', name, 'Map/RESTService/getTile?name=', name,
+                '&level=', (zoom + 1),
+                '&row=', (coord.y + 1),
+                '&col=', (coord.x + 1),
+                '&output=png'
+            ].join(separator='');
+        },
+        tileSize: new google.maps.Size(256, 256)
+    });
+}
+
+function createTmoLayer(path) {
+    return new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            if (coord.x < 0 || coord.y < 0) return 'https://maps.gstatic.com/mapfiles/transparent.png';
+            var base = 'http://maps.t-mobile.com';
+            return [base, '/', path, '/', (zoom + 1), '/', (coord.x + 1), ':', (coord.y + 1), '/tile.png'].join(separator='');
+        },
+        tileSize: new google.maps.Size(256, 256)
+    });
+}
+
+function createFiLayer(path) {
+    return new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            if (coord.x < 0 || coord.y < 0) return 'https://maps.gstatic.com/mapfiles/transparent.png';
+            var base = 'https://ssl.gstatic.com/nova/coverage/tiles';
+            return [base, '/', path, '/', zoom, '/', coord.x, '/', coord.y, '.png'].join(separator='');
+        },
+        tileSize: new google.maps.Size(256, 256)
+    });
+}
+
+function createAttLayer(LayerIds) {
+    return new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            if (coord.x < 0 || coord.y < 0) return 'https://maps.gstatic.com/mapfiles/transparent.png';
+            // https://onemap.att.com/gla6/OneMap/OneMap.Web/Home/TileService?returnType=png&csLayerIds=ATT_Roam_2GData,ATT_Roam_3GData,Coverage_Roam_4GData,Coverage_Roam_LTE,Mti_Coverage_GSM_Data,Mti_Coverage_UMTS_Data,Coverage_HSPAPlus_Data,Coverage_4GLTE_Data&quadKey=02311323210
+            var base = 'https://onemap.att.com/gla6/OneMap/OneMap.Web/Home/TileService?returnType=png&csLayerIds=';
+            return [base, LayerIds, '&quadKey=', tileXYToQuadKey(coord.x, coord.y, zoom)].join(separator='');
+        },
+        tileSize: new google.maps.Size(256, 256)
+    });
+}
+
+function updateLayers() {
+    map.overlayMapTypes.clear();
+    if (showVoice) map.overlayMapTypes.push(voiceCoverage);
+    if (show3G) map.overlayMapTypes.push(pvCoverage);
+    if (showWiMAX) map.overlayMapTypes.push(wimaxCoverage);
+    if (showLTE) map.overlayMapTypes.push(nvCoverage);
+    if (showSpark) map.overlayMapTypes.push(sparkCoverage);
+    if (showClearRoaming) map.overlayMapTypes.push(clearRoaming);
+    if (showClearMobile) map.overlayMapTypes.push(clearMobile);
+    if (showClearHome) map.overlayMapTypes.push(clearHome);
+    if (showClearFuture) map.overlayMapTypes.push(clearFuture);
+    if (showClearSites) map.overlayMapTypes.push(clearSites);
+    if (showTmoPrepaid) map.overlayMapTypes.push(tmoPrepaid);
+    if (showTmoBasic) map.overlayMapTypes.push(tmoBasic);
+    if (showTmoExtended) map.overlayMapTypes.push(tmoExtended);
+    if (showFiCoverage) map.overlayMapTypes.push(fiCoverage);
+    if (showAttGsm) map.overlayMapTypes.push(attGsm);
+    if (showAttUmts) map.overlayMapTypes.push(attUmts);
+    if (showAttHspa) map.overlayMapTypes.push(attHspa);
+    if (showAttLte) map.overlayMapTypes.push(attLte);
+    map.overlayMapTypes.push(waterLayer);
+    map.overlayMapTypes.push(roadLayer);
+
+    updateIndicators();
+}
+
+function updateIndicators() {
+    var on = '#00cc00';
+    var off = '#cc0000';
+    document.getElementById('indNextel').style.setProperty('color', (showNextel) ? on : off);
+    document.getElementById('indSprint').style.setProperty('color', (showSprint) ? on : off);
+    document.getElementById('indClear').style.setProperty('color', (showClear) ? on : off);
+    document.getElementById('indVoice').style.setProperty('color', (showVoice) ? on : off);
+    document.getElementById('ind3G').style.setProperty('color', (show3G) ? on : off);
+    document.getElementById('indWiMAX').style.setProperty('color', (showWiMAX) ? on : off);
+    document.getElementById('indLTE').style.setProperty('color', (showLTE) ? on : off);
+    document.getElementById('indSpark').style.setProperty('color', (showSpark) ? on : off);
+    document.getElementById('indClearHome').style.setProperty('color', (showClearHome) ? on : off);
+    document.getElementById('indClearMobile').style.setProperty('color', (showClearMobile) ? on : off);
+    document.getElementById('indClearRoaming').style.setProperty('color', (showClearRoaming) ? on : off);
+    //document.getElementById('indClearFuture').style.setProperty('color', (showClearFuture) ? on : off);
+    //document.getElementById('indClearSites').style.setProperty('color', (showClearSites) ? on : off);
+    document.getElementById('indS4gruNv').style.setProperty('color', (showS4gruNv) ? on : off);
+    document.getElementById('indS4gru800').style.setProperty('color', (showS4gru800) ? on : off);
+    document.getElementById('indS4gruClear').style.setProperty('color', (showS4gruClear) ? on : off);
+    document.getElementById('indS4gru8t8r').style.setProperty('color', (showS4gru8t8r) ? on : off);
+    document.getElementById('indTmoPrepaid').style.setProperty('color', (showTmoPrepaid) ? on : off);
+    document.getElementById('indTmoBasic').style.setProperty('color', (showTmoBasic) ? on : off);
+    document.getElementById('indTmoExtended').style.setProperty('color', (showTmoExtended) ? on : off);
+    document.getElementById('indFiCoverage').style.setProperty('color', (showFiCoverage) ? on : off);
+    document.getElementById('indAttGsm').style.setProperty('color', (showAttGsm) ? on : off);
+    document.getElementById('indAttUmts').style.setProperty('color', (showAttUmts) ? on : off);
+    document.getElementById('indAttHspa').style.setProperty('color', (showAttHspa) ? on : off);
+    document.getElementById('indAttLte').style.setProperty('color', (showAttLte) ? on : off);
+}
+
+function updatePins() {
+    nvSiteLayer.setMap((showSprint) ? map : null);
+    clearSiteLayer.setMap((showClear) ? map : null);
+    s4gruNvSiteLayer.setMap((showS4gruNv) ? map : null);
+    s4gru800SiteLayer.setMap((showS4gru800) ? map : null);
+    s4gruClearSiteLayer.setMap((showS4gruClear) ? map : null);
+    s4gru8t8rSiteLayer.setMap((showS4gru8t8r) ? map : null);
+
+    updateIndicators();
+}
+
+function initialize() {
+    var mapOptions = {
+        zoom: 8,
+        center: new google.maps.LatLng(39, -94.67),
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+    map = new google.maps.Map(document.getElementById('map'), mapOptions);
+    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(document.getElementById('googft-legend'));
+
+    nextelSiteLayer = createFusionLayer('col2', '1o3CRGPJrk4P-BMEFGWRMdc3X8WzjGHm84QfrenP7', '', null);
+    nvSiteLayer = createFusionLayer('col5', '1PHR0fK3qMqLF8lAticax4ZCFzbaaartlGSKqY8g2', '', null);
+    clearSiteLayer = createFusionLayer('col1', '13ZbQtIx7iGrb5r8TMzFhBV2cG71_TL6h6QreIMiH', '', null);
+    s4gruNvSiteLayer = createFusionLayer('col5', '1OQMOU3JKfoDyPj3U6DHBIFkhe1kFVEv5bLNeMG-t', '', null);
+    s4gru800SiteLayer = createFusionLayer('col5', '1rQ3tl1xqV8xmPRhEjat_yOVppDnC6HaQlHZzUops', '', null);
+    s4gruClearSiteLayer = createFusionLayer('col1', '1TtI4qPFcPXW3qtCiv_7zDcqmrRoaQnpQgFWrnY4', '', null);
+    s4gru8t8rSiteLayer = createFusionLayer('col1', '1Pg7uPxH5CmkeAjeILPPVUKF-VIKaIO5YAR_MtrZf', '', null);
+
+    legend = document.getElementById('legend');
+    legend.index = 1;
+    map.controls[google.maps.ControlPosition.RIGHT_TOP].push(legend);
+    legend.style.setProperty('display', 'block');
+
+    map.set('styles', mapStyles['bottom']);
+
+    voiceCoverage = createSprintLayer('SprintVoiceMap/Tiles/sprint_voice2');
+    pvCoverage = createSprintLayer('SprintDataMap/Tiles/sprint_data2');
+    nvCoverage = createSprintLayer('LTEDataMap/Tiles/lte_no3g_data');
+    wimaxCoverage = createSprintLayer('WiMaxDataMap/Tiles/wimax_data');
+    sparkCoverage = createSprintLayer('SparkDataMap/Tiles/spark_no3g_data');
+
+    tmoPrepaid = createTmoLayer('Partner_TechLTE_Map');
+    tmoBasic = createTmoLayer('Extra2_Map');
+    tmoExtended = createTmoLayer('TMo_TechLTE_Map');
+    
+    clearHome = createClearLayer('CovCurHome');
+    clearHome.setOpacity(.75);
+    clearMobile = createClearLayer('CovCurMobile');
+    clearMobile.setOpacity(.75);
+    clearRoaming = createClearLayer('Roaming');
+    clearRoaming.setOpacity(.75);
+    clearFuture = createClearLayer('CovFuture');
+    clearSites = createClearLayer('Sites');
+
+    fiCoverage = createFiLayer('1401facb');
+
+    attGsm = createAttLayer('ATT_Roam_2GData,Mti_Coverage_GSM_Data');
+    attUmts = createAttLayer('ATT_Roam_3GData,Mti_Coverage_UMTS_Data');
+    attHspa = createAttLayer('Coverage_Roam_4GData,Coverage_HSPAPlus_Data');
+    attLte = createAttLayer('Coverage_Roam_LTE,Coverage_4GLTE_Data');
+
+    waterLayer = createStyledLayer('water', mapStyles['middle']);
+    roadLayer = createStyledLayer('roads', mapStyles['top']);
+
+    updatePanes();
+    updatePins();
+    updateLayers();
+};
+
+function toggleSpark() {
+    showSpark = !showSpark;
+    updateLayers();
+}
+
+function toggleLTE() {
+    showLTE = !showLTE;
+    updateLayers();
+}
+
+function toggleWiMAX() {
+    showWiMAX = !showWiMAX;
+    if (showWiMAX) {
+        showLTE = false;
+        showSpark = false;
+    } else {
+        showSpark = true;
+    }
+
+    updateLayers();
+}
+
+function toggleVoice() {
+    showVoice = !showVoice;
+    updateLayers();
+}
+
+function toggle3G() {
+    show3G = !show3G;
+    updateLayers();
+}
+
+function toggleClearHome() {
+    showClearHome = !showClearHome;
+    updateLayers();
+}
+
+function toggleClearMobile() {
+    showClearMobile = !showClearMobile;
+    updateLayers();
+}
+
+function toggleClearRoaming() {
+    showClearRoaming = !showClearRoaming;
+    updateLayers();
+}
+
+function toggleClearFuture() {
+    showClearFuture = !showClearFuture;
+    updateLayers();
+}
+
+function toggleClearSites() {
+    showClearSites = !showClearSites;
+    updateLayers();
+}
+
+function toggleNextel() {
+    showNextel = !showNextel;
+    nextelSiteLayer.setMap((showNextel) ? map : null);
+    updatePins();
+}
+
+function toggleSprint() {
+    showSprint = !showSprint;
+    updatePins();
+}
+
+function toggleClear() {
+    showClear = !showClear;
+    updatePins();
+}
+
+function toggleS4gruNv() {
+    showS4gruNv = !showS4gruNv;
+    updatePins();
+}
+
+function toggleS4gru800() {
+    showS4gru800 = !showS4gru800;
+    updatePins();
+}
+
+function toggleS4gruClear() {
+    showS4gruClear = !showS4gruClear;
+    updatePins();
+}
+
+function toggleS4gru8t8r() {
+    showS4gru8t8r = !showS4gru8t8r;
+    updatePins();
+}
+
+function toggleTmoPrepaid() {
+    showTmoPrepaid = !showTmoPrepaid;
+    updateLayers();
+}
+
+function toggleTmoBasic() {
+    showTmoBasic = !showTmoBasic;
+    updateLayers();
+}
+
+function toggleTmoExtended() {
+    showTmoExtended = !showTmoExtended;
+    updateLayers();
+}
+
+function toggleFiCoverage() {
+    showFiCoverage = !showFiCoverage;
+    updateLayers();
+}
+
+function toggleAttGsm() {
+    showAttGsm = !showAttGsm;
+    updateLayers();
+}
+
+function toggleAttUmts() {
+    showAttUmts = !showAttUmts;
+    updateLayers();
+}
+
+function toggleAttHspa() {
+    showAttHspa = !showAttHspa;
+    updateLayers();
+}
+
+function toggleAttLte() {
+    showAttLte = !showAttLte;
+    updateLayers();
+}
+
+function updatePanes() {
+    var hide = '▲';
+    var show = '▼';
+
+    document.getElementById('siteDotButtons').style.setProperty('display', (showSiteDotButtons) ? 'block' : 'none');
+    document.getElementById('sitePinButtons').style.setProperty('display', (showSitePinButtons) ? 'block' : 'none');
+    document.getElementById('sprintLayerButtons').style.setProperty('display', (showSprintLayerButtons) ? 'block' : 'none');
+    document.getElementById('clearLayerButtons').style.setProperty('display', (showClearLayerButtons) ? 'block' : 'none');
+    document.getElementById('tmoLayerButtons').style.setProperty('display', (showTmoLayerButtons) ? 'block' : 'none');
+    document.getElementById('fiLayerButtons').style.setProperty('display', (showFiLayerButtons) ? 'block' : 'none');
+    document.getElementById('attLayerButtons').style.setProperty('display', (showAttLayerButtons) ? 'block' : 'none');
+    document.getElementById('sensorlyLayerButtons').style.setProperty('display', (showSensorlyLayerButtons) ? 'block' : 'none');
+
+    document.getElementById('indSiteDots').innerHTML = (showSiteDotButtons) ? hide : show;
+    document.getElementById('indSitePins').innerHTML = (showSitePinButtons) ? hide : show;
+    document.getElementById('indSprintLayers').innerHTML = (showSprintLayerButtons) ? hide : show;
+    document.getElementById('indClearLayers').innerHTML = (showClearLayerButtons) ? hide : show;
+    document.getElementById('indTmoLayers').innerHTML = (showTmoLayerButtons) ? hide : show;
+    document.getElementById('indFiLayers').innerHTML = (showFiLayerButtons) ? hide : show;
+    document.getElementById('indAttLayers').innerHTML = (showAttLayerButtons) ? hide : show;
+    document.getElementById('indSensorlyLayers').innerHTML = (showSensorlyLayerButtons) ? hide : show;
+}
+
+function toggleSiteDotButtons() {
+    showSiteDotButtons = !showSiteDotButtons;
+    if (showSiteDotButtons) {
+        showSitePinButtons = false;
+        showSprintLayerButtons = false;
+        showClearLayerButtons = false;
+        showTmoLayerButtons = false;
+        showFiLayerButtons = false;
+        showAttLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleSitePinButtons() {
+    showSitePinButtons = !showSitePinButtons;
+    if (showSitePinButtons) {
+        showSiteDotButtons = false;
+        showSprintLayerButtons = false;
+        showClearLayerButtons = false;
+        showTmoLayerButtons = false;
+        showFiLayerButtons = false;
+        showAttLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleSprintLayerButtons() {
+    showSprintLayerButtons = !showSprintLayerButtons;
+    if (showSprintLayerButtons) {
+        showSiteDotButtons = false;
+        showSitePinButtons = false;
+        showClearLayerButtons = false;
+        showTmoLayerButtons = false;
+        showFiLayerButtons = false;
+        showAttLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleClearLayerButtons() {
+    showClearLayerButtons = !showClearLayerButtons;
+    if (showClearLayerButtons) {
+        showSiteDotButtons = false;
+        showSitePinButtons = false;
+        showSprintLayerButtons = false;
+        showTmoLayerButtons = false;
+        showFiLayerButtons = false;
+        showAttLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleTmoLayerButtons() {
+    showTmoLayerButtons = !showTmoLayerButtons;
+    if (showTmoLayerButtons) {
+        showSiteDotButtons = false;
+        showSitePinButtons = false;
+        showSprintLayerButtons = false;
+        showClearLayerButtons = false;
+        showFiLayerButtons = false;
+        showAttLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleFiLayerButtons() {
+    showFiLayerButtons = !showFiLayerButtons;
+    if (showFiLayerButtons) {
+        showSiteDotButtons = false;
+        showSitePinButtons = false;
+        showSprintLayerButtons = false;
+        showClearLayerButtons = false;
+        showTmoLayerButtons = false;
+        showAttLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleAttLayerButtons() {
+    showAttLayerButtons = !showAttLayerButtons;
+    if (showAttLayerButtons) {
+        showSiteDotButtons = false;
+        showSitePinButtons = false;
+        showSprintLayerButtons = false;
+        showClearLayerButtons = false;
+        showTmoLayerButtons = false;
+        showFiLayerButtons = false;
+        showSensorlyLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleSensorlyLayerButtons() {
+    showSensorlyLayerButtons = !showSensorlyLayerButtons;
+    if (showSensorlyLayerButtons) {
+        showSiteDotButtons = false;
+        showSitePinButtons = false;
+        showSprintLayerButtons = false;
+        showClearLayerButtons = false;
+        showTmoLayerButtons = false;
+        showFiLayerButtons = false;
+        showAttLayerButtons = false;
+    }
+    updatePanes();
+}
+
+function toggleControls() {
+    showControls = !showControls;
+    document.getElementById('controls').style.setProperty('display', (showControls) ? 'block' : 'none');
+    document.getElementById('controlstext').innerHTML = (showControls) ? 'Hide Controls' : 'Show Controls';
+}
+
+google.maps.event.addDomListener(window, 'load', initialize);
 </script>
 </head>
 <body>
-    <div id="search-panel">
-      <input id="target" type="text" placeholder="Search Box">
-    </div>
     <div id="map">Loading map...</div>
+    <div id="legend">
+        <div align="center">
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleControls(); return false;" id="controlsbutton"
+                ><span id="controlstext">Hide Controls</span></a>
+        </div>
+        <div id="controls">
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleSiteDotButtons(); return false;"
+                ><span class="panelcontrol" id="indSiteDots">-</span> Cell Sites</a>
+            <div class="panel" id="siteDotButtons">
+                <a href="#" onclick="toggleNextel(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indNextel">•</span>Nextel</a>
+                <a href="#" onclick="toggleSprint(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indSprint">•</span>Sprint</a>
+                <a href="#" onclick="toggleClear(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indClear">•</span>Clear</a>
+            </div>
+
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleSitePinButtons(); return false;"
+                ><span class="panelcontrol" id="indSitePins">-</span> S4GRU Pins</a>
+            <div class="panel" id="sitePinButtons">
+                <a href="#" onclick="toggleS4gruNv(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indS4gruNv">•</span>NV Sites</a>
+                <a href="#" onclick="toggleS4gru800(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indS4gru800">•</span>B26 Sites</a>
+                <a href="#" onclick="toggleS4gruClear(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indS4gruClear">•</span>Clear Sites</a>
+                <a href="#" onclick="toggleS4gru8t8r(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indS4gru8t8r">•</span>8T8R Sites</a>
+                <!--a href="#" onclick="; return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="ind">•</span></a-->
+            </div>
+
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleSprintLayerButtons(); return false;"
+                ><span class="panelcontrol" id="indSprintLayers">-</span> Sprint Layers</a>
+            <div class="panel" id="sprintLayerButtons">
+                <a href="#" onclick="toggleVoice(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indVoice">•</span>3G Voice</a>
+                <a href="#" onclick="toggle3G(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="ind3G">•</span>3G EV-DO</a>
+                <a href="#" onclick="toggleWiMAX(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indWiMAX">•</span>4G WiMAX</a>
+             <a href="#" onclick="toggleLTE(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indLTE">•</span>4G LTE</a>
+             <a href="#" onclick="toggleSpark(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indSpark">•</span>Spark LTE</a>
+            </div>
+
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleClearLayerButtons(); return false;"
+                ><span class="panelcontrol" id="indClearLayers">-</span> Clear Layers</a>
+            <div class="panel" id="clearLayerButtons">
+                <a href="#" onclick="toggleClearRoaming(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indClearRoaming">•</span>Roaming</a>
+                <a href="#" onclick="toggleClearMobile(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indClearMobile">•</span>Mobile</a>
+                <a href="#" onclick="toggleClearHome(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indClearHome">•</span>Home</a>
+            </div>
+            <!--p><span class="indicator" id="indClearFuture">•</span><button onclick="toggleClearFuture()">Future</button></p>
+            <p><span class="indicator" id="indClearSites">•</span><button onclick="toggleClearSites()">Sites</button></p-->
+
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleTmoLayerButtons(); return false;"
+                ><span class="panelcontrol" id="indTmoLayers">-</span> T-Mobile Layers</a>
+            <div class="panel" id="tmoLayerButtons">
+                <a href="#" onclick="toggleTmoPrepaid(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indTmoPrepaid">•</span>Prepaid</a>
+                <a href="#" onclick="toggleTmoBasic(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indTmoBasic">•</span>Basic</a>
+                <a href="#" onclick="toggleTmoExtended(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indTmoExtended">•</span>Extended</a>
+            </div>
+
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleFiLayerButtons(); return false;"
+                ><span class="panelcontrol" id="indFiLayers">-</span> Project Fi Layers</a>
+            <div class="panel" id="fiLayerButtons">
+                <a href="#" onclick="toggleFiCoverage(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indFiCoverage">•</span>Coverage</a>
+            </div>
+
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleAttLayerButtons(); return false;"
+                ><span class="panelcontrol" id="indAttLayers">-</span> AT&T Layers</a>
+            <div class="panel" id="attLayerButtons">
+                <a href="#" onclick="toggleAttGsm(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indAttGsm">•</span>2G GSM</a>
+                <a href="#" onclick="toggleAttUmts(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indAttUmts">•</span>3G UMTS</a>
+                <a href="#" onclick="toggleAttHspa(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indAttHspa">•</span>4G HSPA</a>
+                <a href="#" onclick="toggleAttLte(); return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indAttLte">•</span>4G LTE</a>
+            </div>
+            <a class="panelheader" href="#" oncontextmenu="return false;"
+                onclick="toggleSensorlyLayerButtons(); return false;"
+                ><span class="panelcontrol" id="indSensorlyLayers">-</span> Sensorly Layers</a>
+            <div class="panel" id="sensorlyLayerButtons">
+                <a href="#" onclick="return false;" oncontextmenu="return false;"
+                    ><span class="indicator" id="indComingSoon">•</span>Coming Soon</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
+
